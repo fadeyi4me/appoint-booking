@@ -165,20 +165,19 @@ export default function App() {
     : [];
 
   // ── Login logic ──
-  function handleLogin() {
+  function handleLogin(nameVal, pinVal) {
+    const n = nameVal || loginInput;
+    const p = pinVal || loginPin;
     setLoginError("");
-    const match = STAFF_CREDENTIALS.find(
-      s => s.name.toLowerCase() === loginInput.toLowerCase() && s.pin === loginPin
-    );
+    const match = STAFF_CREDENTIALS.find(s => s.name === n && s.pin === p);
     if (match) {
       setStaffUser(match);
       setShowLogin(false);
       setLoginInput(""); setLoginPin(""); setLoginError("");
       setView("admin");
     } else {
-      setLoginError("Incorrect name or PIN. Please try again.");
+      setLoginError("Incorrect PIN. Please try again.");
       setLoginPin("");
-      pinRef.current?.focus();
     }
   }
 
@@ -443,46 +442,84 @@ export default function App() {
 
       {/* ══ LOGIN MODAL ══ */}
       {showLogin && (
-        <div className="login-overlay" onClick={e => { if (e.target === e.currentTarget) { setShowLogin(false); setLoginPin(""); setLoginInput(""); setLoginError(""); } }}>
-          <div className="login-card">
-            <button className="btn-icon" style={{ position:"absolute", top:20, right:20 }} onClick={() => { setShowLogin(false); setLoginPin(""); setLoginInput(""); setLoginError(""); }}>✕</button>
-            <div style={{ textAlign:"center", marginBottom:28 }}>
-              <div style={{ width:56, height:56, borderRadius:"50%", background:"rgba(201,169,110,.12)", border:"1px solid rgba(201,169,110,.3)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px", fontSize:24 }}>🔑</div>
-              <h2 className="pf" style={{ fontSize:26, fontWeight:500, color:D.text }}>Staff Portal</h2>
-              <p className="dm" style={{ fontSize:13, color:D.textMid, marginTop:6 }}>Enter your name and PIN to continue</p>
+        <div style={{position:"fixed",inset:0,zIndex:1000,background:"rgba(14,12,10,.88)",backdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"center"}}
+          onClick={e => { if(e.target===e.currentTarget){setShowLogin(false);setLoginPin("");setLoginInput("");setLoginError("");} }}>
+          <div style={{background:D.surface,border:`1px solid ${D.border}`,borderRadius:4,padding:"44px 40px",width:"100%",maxWidth:400,position:"relative"}}>
+            <button onClick={() => {setShowLogin(false);setLoginPin("");setLoginInput("");setLoginError("");}}
+              style={{position:"absolute",top:16,right:16,background:"none",border:"none",color:D.textMid,cursor:"pointer",fontSize:20,lineHeight:1,padding:4}}>✕</button>
+
+            <div style={{textAlign:"center",marginBottom:28}}>
+              <div style={{width:56,height:56,borderRadius:"50%",background:"rgba(201,169,110,.12)",border:"1px solid rgba(201,169,110,.3)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",fontSize:24}}>🔑</div>
+              <h2 className="pf" style={{fontSize:26,fontWeight:500,color:D.text}}>Staff Portal</h2>
+              <p className="dm" style={{fontSize:13,color:D.textMid,marginTop:6}}>Select your name and enter your PIN</p>
             </div>
 
             <label className="lbl">Your Name</label>
-            <input className="inp" placeholder="e.g. Jordan Lee" value={loginInput}
-              onChange={e => setLoginInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && pinRef.current?.focus()}
-              style={{ marginBottom:20 }} />
+            <select className="inp" value={loginInput}
+              onChange={e => { setLoginInput(e.target.value); setLoginError(""); setLoginPin(""); }}
+              style={{marginBottom:24,cursor:"pointer"}}>
+              <option value="">— Select staff member —</option>
+              {STAFF_CREDENTIALS.map(s => (
+                <option key={s.id} value={s.name}>{s.name} · {s.role}</option>
+              ))}
+            </select>
 
-            <label className="lbl" style={{ textAlign:"center", display:"block" }}>PIN</label>
-            <div className="pin-dots">
+            <label className="lbl" style={{textAlign:"center"}}>PIN</label>
+            <div style={{display:"flex",gap:14,justifyContent:"center",margin:"12px 0 20px"}}>
               {[0,1,2,3].map(i => (
-                <div key={i} className={`pin-dot ${i < loginPin.length ? "filled" : ""}`} />
+                <div key={i} style={{width:16,height:16,borderRadius:"50%",border:`2px solid ${i < loginPin.length ? D.gold : D.border}`,background:i < loginPin.length ? D.gold : "transparent",transition:"all .2s"}} />
               ))}
             </div>
 
-            <input ref={pinRef} type="password" className="inp" placeholder="Enter 4-digit PIN"
-              value={loginPin} maxLength={4}
-              onChange={e => { setLoginPin(e.target.value.replace(/\D/g,"")); setLoginError(""); }}
-              onKeyDown={e => e.key === "Enter" && loginPin.length === 4 && handleLogin()}
-              style={{ textAlign:"center", letterSpacing:"8px", fontSize:20, marginBottom:8 }} />
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}}>
+              {["1","2","3","4","5","6","7","8","9","","0","⌫"].map((key, idx) => {
+                const isEmpty = key === "";
+                const isBack = key === "⌫";
+                return (
+                  <button key={idx}
+                    onClick={() => {
+                      if (isEmpty) return;
+                      if (isBack) { setLoginPin(p => p.slice(0,-1)); return; }
+                      if (loginPin.length < 4) {
+                        const newPin = loginPin + key;
+                        setLoginPin(newPin);
+                        setLoginError("");
+                        if (newPin.length === 4 && loginInput) {
+                          const match = STAFF_CREDENTIALS.find(s => s.name === loginInput && s.pin === newPin);
+                          if (match) { setStaffUser(match); setShowLogin(false); setLoginInput(""); setLoginPin(""); setLoginError(""); setView("admin"); }
+                          else { setLoginError("Incorrect PIN. Please try again."); setTimeout(() => setLoginPin(""), 600); }
+                        }
+                      }
+                    }}
+                    style={{
+                      background: isEmpty ? "transparent" : D.surface2,
+                      border: isEmpty ? "none" : `1px solid ${D.border}`,
+                      color: isBack ? D.gold : D.text,
+                      fontFamily:"'Playfair Display', serif",
+                      fontSize: isBack ? 18 : 22,
+                      padding:"15px 8px",
+                      cursor: isEmpty ? "default" : "pointer",
+                      borderRadius:3,
+                      transition:"all .15s",
+                    }}>
+                    {key}
+                  </button>
+                );
+              })}
+            </div>
 
             {loginError && (
-              <p className="dm" style={{ fontSize:12, color:D.danger, textAlign:"center", marginBottom:12 }}>{loginError}</p>
+              <p className="dm" style={{fontSize:12,color:D.danger,textAlign:"center",marginBottom:10}}>{loginError}</p>
             )}
 
-            <button className="btn-primary" style={{ width:"100%", marginTop:16 }}
+            <button className="btn-primary" style={{width:"100%",marginTop:4,opacity:(!loginInput||loginPin.length<4)?0.4:1}}
               disabled={!loginInput || loginPin.length < 4}
-              onClick={handleLogin}>
-              Sign In
+              onClick={() => handleLogin(loginInput, loginPin)}>
+              Sign In →
             </button>
 
-            <p className="dm" style={{ fontSize:11, color:D.textDim, textAlign:"center", marginTop:20, lineHeight:1.6 }}>
-              Access is restricted to authorized staff only.<br/>Contact admin if you need credentials.
+            <p className="dm" style={{fontSize:11,color:D.textDim,textAlign:"center",marginTop:18,lineHeight:1.7}}>
+              Authorized staff only. Contact admin for access.
             </p>
           </div>
         </div>
