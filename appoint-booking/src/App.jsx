@@ -1,58 +1,56 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
-// ============================================================
-//  SUPABASE CONFIG — replace these two values after setup
-//  See the "⚙ Setup" tab in the app for step-by-step help
-// ============================================================
-const SUPABASE_URL = "https://tftewlamxkzzajbulsvd.supabase.co";
+// ─── Supabase config ───────────────────────────────────────────────────────
+const SUPABASE_URL      = "https://tftewlamxkzzajbulsvd.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRmdGV3bGFteGt6emFqYnVsc3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyMjIyODAsImV4cCI6MjA4ODc5ODI4MH0.hNiA_t5GMYDfqjtITPWoq9cB_lQxag5yYu1fpEleEO4";
+const IS_CONFIGURED     = SUPABASE_URL !== "https://tftewlamxkzzajbulsvd.supabase.co";
 
-// Lightweight Supabase REST helper (no npm package needed)
-const supabase = {
-  async select(table, filters = "") {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filters}&order=created_at.desc`, {
+const sb = {
+  async select(table, qs = "") {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${qs}&order=created_at.desc`, {
       headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
     });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
   },
   async insert(table, data) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
       method: "POST",
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json",
-        Prefer: "return=representation",
-      },
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json", Prefer: "return=representation" },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
   },
   async delete(table, id) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
       method: "DELETE",
       headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!r.ok) throw new Error(await r.text());
   },
 };
 
-const IS_CONFIGURED = SUPABASE_URL !== "https://tftewlamxkzzajbulsvd.supabase.co";
+// ─── Staff credentials (in production: move to Supabase auth) ─────────────
+const STAFF_CREDENTIALS = [
+  { id: 1, username: "jordan",  password: "stylist123", name: "Jordan Lee",   role: "Senior Stylist",   avatar: "JL" },
+  { id: 2, username: "maya",    password: "color456",   name: "Maya Chen",    role: "Color Specialist", avatar: "MC" },
+  { id: 3, username: "alex",    password: "director789", name: "Alex Rivera", role: "Style Director",   avatar: "AR" },
+  { id: 0, username: "admin",   password: "lumiere2024", name: "Admin",       role: "Administrator",    avatar: "AD" },
+];
 
-// ============================================================
+// ─── Data ──────────────────────────────────────────────────────────────────
 const SERVICES = [
-  { id: 1, name: "Haircut & Style", duration: 60, price: 150, icon: "✂️" },
-  { id: 2, name: "Color Treatment", duration: 120, price: 220, icon: "🎨" },
-  { id: 3, name: "Deep Conditioning", duration: 45, price: 300, icon: "💧" },
-  { id: 4, name: "Blowout", duration: 30, price: 50, icon: "💨" },
+  { id: 1, name: "Haircut & Style",     duration: 60,  price: 65,  icon: "✂",  tagline: "Precision cuts tailored to you" },
+  { id: 2, name: "Color Treatment",     duration: 120, price: 120, icon: "◈",  tagline: "Vivid, lasting colour artistry" },
+  { id: 3, name: "Deep Conditioning",   duration: 45,  price: 45,  icon: "◉",  tagline: "Restore & strengthen your hair" },
+  { id: 4, name: "Blowout",             duration: 30,  price: 35,  icon: "◎",  tagline: "Smooth, voluminous finish" },
 ];
 
 const STAFF = [
-  { id: 1, name: "Adesola Fadeyi", role: "Senior Stylist", avatar: "AF" },
-  { id: 2, name: "Gift Michael", role: "Color Specialist", avatar: "GM" },
-  { id: 3, name: "Busola Oguntade", role: "Style Director", avatar: "BO" },
+  { id: 1, name: "Jordan Lee",   role: "Senior Stylist",   avatar: "JL", specialty: "Precision Cuts" },
+  { id: 2, name: "Maya Chen",    role: "Color Specialist", avatar: "MC", specialty: "Balayage & Colour" },
+  { id: 3, name: "Alex Rivera",  role: "Style Director",   avatar: "AR", specialty: "Avant-garde Styles" },
 ];
 
 const TIME_SLOTS = [
@@ -62,127 +60,216 @@ const TIME_SLOTS = [
 ];
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const DAYS   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+// ─── Carousel slides (CSS art — no images needed) ─────────────────────────
+const SLIDES = [
+  {
+    title: "Haircut & Style",
+    sub: "Precision crafted for you",
+    price: "from $65",
+    bg: "linear-gradient(135deg, #1a0a00 0%, #3d1f00 40%, #c9a96e 100%)",
+    accent: "#c9a96e",
+    shape: `<circle cx="320" cy="180" r="140" fill="none" stroke="#c9a96e" stroke-width="0.5" opacity="0.4"/>
+            <circle cx="320" cy="180" r="100" fill="none" stroke="#c9a96e" stroke-width="0.3" opacity="0.3"/>
+            <line x1="180" y1="40" x2="460" y2="320" stroke="#c9a96e" stroke-width="0.4" opacity="0.25"/>
+            <line x1="460" y1="40" x2="180" y2="320" stroke="#c9a96e" stroke-width="0.4" opacity="0.25"/>
+            <text x="320" y="195" text-anchor="middle" font-size="88" fill="#c9a96e" opacity="0.12" font-family="Georgia">✂</text>`,
+  },
+  {
+    title: "Colour Treatment",
+    sub: "Vivid. Lasting. Luminous.",
+    price: "from $120",
+    bg: "linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 45%, #8b5cf6 100%)",
+    accent: "#a78bfa",
+    shape: `<ellipse cx="320" cy="180" rx="160" ry="100" fill="none" stroke="#a78bfa" stroke-width="0.5" opacity="0.4"/>
+            <ellipse cx="320" cy="180" rx="120" ry="70" fill="none" stroke="#a78bfa" stroke-width="0.3" opacity="0.3"/>
+            <circle cx="200" cy="100" r="40" fill="#a78bfa" opacity="0.06"/>
+            <circle cx="440" cy="260" r="60" fill="#7c3aed" opacity="0.08"/>
+            <text x="320" y="200" text-anchor="middle" font-size="80" fill="#a78bfa" opacity="0.10" font-family="Georgia">◈</text>`,
+  },
+  {
+    title: "Deep Conditioning",
+    sub: "Restore. Strengthen. Glow.",
+    price: "from $45",
+    bg: "linear-gradient(135deg, #001a0d 0%, #003320 45%, #10b981 100%)",
+    accent: "#6ee7b7",
+    shape: `<path d="M 160 180 Q 240 80 320 180 Q 400 280 480 180" fill="none" stroke="#6ee7b7" stroke-width="0.8" opacity="0.35"/>
+            <path d="M 160 200 Q 240 100 320 200 Q 400 300 480 200" fill="none" stroke="#6ee7b7" stroke-width="0.5" opacity="0.2"/>
+            <circle cx="320" cy="180" r="80" fill="none" stroke="#6ee7b7" stroke-width="0.3" opacity="0.3"/>
+            <text x="320" y="195" text-anchor="middle" font-size="72" fill="#6ee7b7" opacity="0.10" font-family="Georgia">◉</text>`,
+  },
+  {
+    title: "Blowout",
+    sub: "Smooth. Voluminous. Bold.",
+    price: "from $35",
+    bg: "linear-gradient(135deg, #1a0505 0%, #3d0a0a 45%, #ef4444 100%)",
+    accent: "#fca5a5",
+    shape: `<rect x="160" y="80" width="320" height="200" rx="100" fill="none" stroke="#fca5a5" stroke-width="0.5" opacity="0.35"/>
+            <rect x="190" y="110" width="260" height="140" rx="70" fill="none" stroke="#fca5a5" stroke-width="0.3" opacity="0.25"/>
+            <circle cx="320" cy="180" r="50" fill="#ef4444" opacity="0.06"/>
+            <text x="320" y="195" text-anchor="middle" font-size="68" fill="#fca5a5" opacity="0.10" font-family="Georgia">◎</text>`,
+  },
+];
 
 function getDaysInMonth(year, month) {
-  const days = [];
-  const firstDay = new Date(year, month, 1).getDay();
+  const d = [];
+  const firstDay  = new Date(year, month, 1).getDay();
   const totalDays = new Date(year, month + 1, 0).getDate();
-  for (let i = 0; i < firstDay; i++) days.push(null);
-  for (let d = 1; d <= totalDays; d++) days.push(d);
-  return days;
+  for (let i = 0; i < firstDay; i++) d.push(null);
+  for (let i = 1; i <= totalDays; i++) d.push(i);
+  return d;
 }
 
-const SQL_SETUP = `-- Run this in Supabase SQL Editor (Database → SQL Editor → New Query)
-
-create table bookings (
-  id uuid default gen_random_uuid() primary key,
-  created_at timestamptz default now(),
-  name text not null,
-  email text not null,
-  phone text not null,
-  notes text,
-  service text not null,
-  staff text not null,
-  staff_id integer not null,
-  date text not null,
-  time text not null
-);
-
--- Allow public read/write (fine for demo).
--- In production: tighten with Row Level Security.
-alter table bookings enable row level security;
-create policy "Public read" on bookings for select using (true);
-create policy "Public insert" on bookings for insert with check (true);
-create policy "Public delete" on bookings for delete using (true);`;
-
-export default function BookingApp() {
+// ══════════════════════════════════════════════════════════════════════════
+export default function App() {
   const today = new Date();
-  const [activeTab, setActiveTab] = useState("book");
-  const [step, setStep] = useState(1);
-  const [selectedService, setSelectedService] = useState(null);
-  const [selectedStaff, setSelectedStaff] = useState(null);
-  const [calMonth, setCalMonth] = useState(today.getMonth());
-  const [calYear, setCalYear] = useState(today.getFullYear());
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [selectedTime, setSelectedTime] = useState(null);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", notes: "" });
-  const [submitted, setSubmitted] = useState(false);
-  const [bookings, setBookings] = useState([]);
-  const [bookedSlots, setBookedSlots] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [dbError, setDbError] = useState(null);
-  const [copied, setCopied] = useState(null);
-  const [deleting, setDeleting] = useState(null);
 
-  const dateStr = selectedDate ? `${MONTHS[calMonth]} ${selectedDate}, ${calYear}` : null;
+  // Theme
+  const [dark, setDark] = useState(true);
 
+  // Nav
+  const [view, setView]         = useState("home"); // home | book | admin
+  const [bookStep, setBookStep] = useState(1);
+
+  // Auth
+  const [showLogin, setShowLogin]     = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [loggedIn, setLoggedIn]       = useState(null); // staff object or null
+  const [loginForm, setLoginForm]     = useState({ u: "", p: "", err: "" });
+
+  // Booking state
+  const [selService, setSelService] = useState(null);
+  const [selStaff, setSelStaff]     = useState(null);
+  const [calMonth, setCalMonth]     = useState(today.getMonth());
+  const [calYear, setCalYear]       = useState(today.getFullYear());
+  const [selDate, setSelDate]       = useState(null);
+  const [selTime, setSelTime]       = useState(null);
+  const [clientForm, setClientForm] = useState({ name:"", email:"", phone:"", notes:"" });
+  const [submitted, setSubmitted]   = useState(false);
+  const [saving, setSaving]         = useState(false);
+  const [bookErr, setBookErr]       = useState("");
+
+  // DB
+  const [bookings, setBookings]     = useState([]);
+  const [takenMap, setTakenMap]     = useState({});
+  const [dbLoading, setDbLoading]   = useState(false);
+  const [deleting, setDeleting]     = useState(null);
+
+  // Carousel
+  const [slide, setSlide]           = useState(0);
+  const slideRef                    = useRef(null);
+
+  // ── Theme vars ──────────────────────────────────────────────────────────
+  const T = dark ? {
+    bg:"#0a0a0a", surface:"#131313", card:"#181818", border:"#252525",
+    text:"#f0ece4", muted:"#6b6b6b", accent:"#c9a96e", accentText:"#0a0a0a",
+    inputBg:"#0d0d0d", overlay:"rgba(0,0,0,0.85)", glass:"rgba(20,18,14,0.92)",
+    shadow:"0 32px 80px rgba(0,0,0,0.6)", subtext:"#999",
+  } : {
+    bg:"#faf8f4", surface:"#ffffff", card:"#f5f0e8", border:"#e2d9c8",
+    text:"#1a1a1a", muted:"#888", accent:"#a07840", accentText:"#ffffff",
+    inputBg:"#ffffff", overlay:"rgba(250,248,244,0.88)", glass:"rgba(255,253,248,0.95)",
+    shadow:"0 32px 80px rgba(0,0,0,0.12)", subtext:"#666",
+  };
+
+  // ── Carousel auto-advance ───────────────────────────────────────────────
+  useEffect(() => {
+    const t = setInterval(() => setSlide(s => (s + 1) % SLIDES.length), 5000);
+    return () => clearInterval(t);
+  }, []);
+
+  // ── Fetch bookings ──────────────────────────────────────────────────────
   const fetchBookings = useCallback(async () => {
     if (!IS_CONFIGURED) return;
-    setLoading(true); setDbError(null);
+    setDbLoading(true);
     try {
-      const data = await supabase.select("bookings");
+      const data = await sb.select("bookings");
       setBookings(data);
-      setBookedSlots(data.map(b => ({ staff_id: b.staff_id, date: b.date, time: b.time })));
-    } catch (e) { setDbError(e.message); }
-    finally { setLoading(false); }
+      const map = {};
+      data.forEach(b => {
+        const k = `${b.staff_id}__${b.date}`;
+        if (!map[k]) map[k] = [];
+        map[k].push(b.time);
+      });
+      setTakenMap(map);
+    } catch (e) { console.error(e); }
+    finally { setDbLoading(false); }
   }, []);
 
   useEffect(() => { fetchBookings(); }, [fetchBookings]);
 
+  // ── Fetch slots when staff+date changes ────────────────────────────────
+  const dateStr = selDate ? `${MONTHS[calMonth]} ${selDate}, ${calYear}` : null;
   useEffect(() => {
-    if (!IS_CONFIGURED || !selectedDate || !selectedStaff) return;
-    (async () => {
-      try {
-        const data = await supabase.select("bookings",
-          `staff_id=eq.${selectedStaff.id}&date=eq.${encodeURIComponent(dateStr)}&select=time`);
-        setBookedSlots(prev => {
-          const filtered = prev.filter(s => !(s.staff_id === selectedStaff.id && s.date === dateStr));
-          return [...filtered, ...data.map(d => ({ staff_id: selectedStaff.id, date: dateStr, time: d.time }))];
-        });
-      } catch (_) {}
-    })();
-  }, [selectedDate, selectedStaff, dateStr]);
+    if (!IS_CONFIGURED || !selDate || !selStaff) return;
+    sb.select("bookings", `staff_id=eq.${selStaff.id}&date=eq.${encodeURIComponent(dateStr)}&select=time`)
+      .then(data => {
+        const k = `${selStaff.id}__${dateStr}`;
+        setTakenMap(prev => ({ ...prev, [k]: data.map(d => d.time) }));
+      }).catch(() => {});
+  }, [selDate, selStaff, dateStr]);
 
-  const takenSlots = (selectedStaff && dateStr)
-    ? bookedSlots.filter(s => s.staff_id === selectedStaff.id && s.date === dateStr).map(s => s.time)
-    : [];
+  const takenSlots = (selStaff && dateStr) ? (takenMap[`${selStaff.id}__${dateStr}`] || []) : [];
 
-  async function handleBook() {
-    setSaving(true); setDbError(null);
+  // ── Login ───────────────────────────────────────────────────────────────
+  function doLogin() {
+    const match = STAFF_CREDENTIALS.find(
+      s => s.username === loginForm.u.trim().toLowerCase() && s.password === loginForm.p
+    );
+    if (match) {
+      setLoggedIn(match);
+      setShowLogin(false);
+      setLoginForm({ u:"", p:"", err:"" });
+      setView("admin");
+      fetchBookings();
+    } else {
+      setLoginForm(f => ({ ...f, err: "Invalid credentials. Please try again." }));
+    }
+  }
+
+  function doLogout() {
+    setLoggedIn(null);
+    setView("home");
+  }
+
+  // ── Book ────────────────────────────────────────────────────────────────
+  async function confirmBooking() {
+    setSaving(true); setBookErr("");
     const record = {
-      name: form.name, email: form.email, phone: form.phone, notes: form.notes,
-      service: selectedService.name, staff: selectedStaff.name,
-      staff_id: selectedStaff.id, date: dateStr, time: selectedTime,
+      name: clientForm.name, email: clientForm.email,
+      phone: clientForm.phone, notes: clientForm.notes,
+      service: selService.name, staff: selStaff.name,
+      staff_id: selStaff.id, date: dateStr, time: selTime,
     };
     try {
       if (IS_CONFIGURED) {
-        const [saved] = await supabase.insert("bookings", record);
-        setBookings(prev => [saved, ...prev]);
-        setBookedSlots(prev => [...prev, { staff_id: selectedStaff.id, date: dateStr, time: selectedTime }]);
+        const [saved] = await sb.insert("bookings", record);
+        setBookings(p => [saved, ...p]);
+        const k = `${selStaff.id}__${dateStr}`;
+        setTakenMap(p => ({ ...p, [k]: [...(p[k] || []), selTime] }));
       } else {
-        setBookings(prev => [{ id: Date.now(), ...record, created_at: new Date().toISOString() }, ...prev]);
+        setBookings(p => [{ id: Date.now(), ...record, created_at: new Date().toISOString() }, ...p]);
       }
       setSubmitted(true);
-    } catch (e) { setDbError("Booking failed: " + e.message); }
+    } catch (e) { setBookErr("Booking failed: " + e.message); }
     finally { setSaving(false); }
   }
 
-  async function handleDelete(id) {
+  async function deleteBooking(id) {
     setDeleting(id);
     try {
-      if (IS_CONFIGURED) await supabase.delete("bookings", id);
-      setBookings(prev => prev.filter(b => b.id !== id));
-    } catch (e) { setDbError("Delete failed: " + e.message); }
+      if (IS_CONFIGURED) await sb.delete("bookings", id);
+      setBookings(p => p.filter(b => b.id !== id));
+    } catch (e) { console.error(e); }
     finally { setDeleting(null); }
   }
 
-  function reset() {
-    setStep(1); setSelectedService(null); setSelectedStaff(null);
-    setSelectedDate(null); setSelectedTime(null);
-    setForm({ name:"", email:"", phone:"", notes:"" });
-    setSubmitted(false); setDbError(null);
+  function resetBook() {
+    setBookStep(1); setSelService(null); setSelStaff(null);
+    setSelDate(null); setSelTime(null);
+    setClientForm({ name:"", email:"", phone:"", notes:"" });
+    setSubmitted(false); setBookErr("");
   }
 
   const revenue = bookings.reduce((a, b) => {
@@ -192,336 +279,630 @@ export default function BookingApp() {
 
   const days = getDaysInMonth(calYear, calMonth);
 
-  return (
-    <div style={{ fontFamily: "Georgia, serif", minHeight: "100vh", background: "#0d0d0d", color: "#f0ece4" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Jost:wght@300;400;500&display=swap');
-        *{box-sizing:border-box;margin:0;padding:0}
-        .af{font-family:'Cormorant Garamond',Georgia,serif}
-        .bf{font-family:'Jost',sans-serif}
-        .gold{color:#c9a96e}
-        .card{background:#161616;border:1px solid #2a2a2a;border-radius:2px;transition:all .25s}
-        .card:hover{border-color:#c9a96e}
-        .card.sel{border-color:#c9a96e;background:#1c1a14}
-        .card.noh:hover{border-color:#2a2a2a}
-        .bg{background:#c9a96e;color:#0d0d0d;border:none;padding:14px 32px;font-family:'Jost',sans-serif;font-weight:500;font-size:13px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s}
-        .bg:hover{background:#e0be82}
-        .bg:disabled{background:#333;color:#666;cursor:not-allowed}
-        .bo{background:transparent;color:#c9a96e;border:1px solid #c9a96e;padding:13px 32px;font-family:'Jost',sans-serif;font-size:13px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s}
-        .bo:hover{background:#c9a96e22}
-        .bsm{padding:7px 16px!important;font-size:11px!important}
-        .inp{background:#111;border:1px solid #2a2a2a;color:#f0ece4;padding:12px 16px;font-family:'Jost',sans-serif;font-size:14px;width:100%;outline:none;border-radius:1px;transition:border-color .2s}
-        .inp:focus{border-color:#c9a96e}
-        .ts{background:#161616;border:1px solid #2a2a2a;color:#aaa;padding:8px 12px;font-family:'Jost',sans-serif;font-size:12px;cursor:pointer;letter-spacing:.5px;transition:all .2s;text-align:center}
-        .ts:hover:not(.bk){border-color:#c9a96e;color:#f0ece4}
-        .ts.act{background:#c9a96e;color:#0d0d0d;border-color:#c9a96e;font-weight:500}
-        .ts.bk{opacity:.3;cursor:not-allowed;text-decoration:line-through}
-        .cd{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-family:'Jost',sans-serif;font-size:13px;cursor:pointer;border-radius:50%;transition:all .15s;color:#aaa}
-        .cd:hover:not(.past):not(.emp){background:#2a2a2a;color:#f0ece4}
-        .cd.sel2{background:#c9a96e!important;color:#0d0d0d!important;font-weight:600}
-        .cd.past{opacity:.25;cursor:default}
-        .cd.tod{color:#c9a96e;font-weight:600}
-        .cd.emp{cursor:default}
-        .nt{font-family:'Jost',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;padding:8px 20px;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;color:#555;background:none;border-top:none;border-left:none;border-right:none}
-        .nt:hover{color:#aaa}
-        .nt.act2{color:#c9a96e;border-bottom-color:#c9a96e}
-        .br{border-bottom:1px solid #1a1a1a;padding:14px 0}
-        .tg{display:inline-block;padding:3px 10px;font-family:'Jost',sans-serif;font-size:10px;letter-spacing:1px;text-transform:uppercase}
-        .dbb{background:#1a1000;border:1px solid #c9a96e44;padding:12px 20px;display:flex;align-items:center;gap:12px}
-        .cb{background:#111;border:1px solid #2a2a2a;border-radius:2px;padding:20px;font-family:'Courier New',monospace;font-size:12px;color:#aaa;line-height:1.7;white-space:pre;overflow-x:auto}
-        .sn{width:28px;height:28px;border-radius:50%;background:#c9a96e;color:#0d0d0d;display:flex;align-items:center;justify-content:center;font-family:'Jost',sans-serif;font-size:12px;font-weight:500;flex-shrink:0}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-        .fu{animation:fadeUp .35s ease forwards}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        .sp{width:18px;height:18px;border:2px solid #333;border-top-color:#c9a96e;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
-        .sh::-webkit-scrollbar{display:none}
-        .cf{position:absolute;width:6px;height:6px;border-radius:50%;animation:fall 3s ease-in forwards}
-        @keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(400px) rotate(720deg);opacity:0}}
-        .db{background:none;border:none;color:#444;cursor:pointer;font-size:16px;padding:4px 8px;transition:color .2s}
-        .db:hover{color:#c0392b}
-        .dv{border:none;border-top:1px solid #1e1e1e;margin:0}
-      `}</style>
+  // ═══════════════════════════════════════════════════════════════════════
+  // CSS
+  // ═══════════════════════════════════════════════════════════════════════
+  const css = `
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: ${T.bg}; color: ${T.text}; font-family: 'Outfit', sans-serif; transition: background .4s, color .4s; }
 
-      {/* Header */}
-      <header style={{borderBottom:"1px solid #1e1e1e",padding:"20px 40px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <div>
-          <h1 className="af" style={{fontSize:28,fontWeight:300,letterSpacing:4}}>Ades Hair World</h1>
-          <p className="bf" style={{fontSize:10,letterSpacing:3,color:"#6b6b6b",textTransform:"uppercase",marginTop:2}}>Hair & Beauty Studio</p>
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: ${T.bg}; }
+    ::-webkit-scrollbar-thumb { background: ${T.border}; border-radius: 2px; }
+
+    .serif { font-family: 'Cormorant Garamond', Georgia, serif; }
+
+    /* ── Carousel ── */
+    .carousel { position: relative; width: 100%; height: 420px; overflow: hidden; }
+    .carousel-slide {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 80px;
+      opacity: 0; transition: opacity .9s ease, transform .9s ease;
+      transform: translateX(30px);
+    }
+    .carousel-slide.active { opacity: 1; transform: translateX(0); }
+    .carousel-slide.exit   { opacity: 0; transform: translateX(-30px); }
+    .carousel-text { position: relative; z-index: 2; }
+    .carousel-art  { position: absolute; right: 60px; top: 50%; transform: translateY(-50%); opacity: .9; }
+    .carousel-dots { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; }
+    .cdot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.3); cursor: pointer; transition: all .3s; border: none; }
+    .cdot.active { width: 24px; border-radius: 3px; background: white; }
+
+    /* ── Cards ── */
+    .card {
+      background: ${T.card};
+      border: 1px solid ${T.border};
+      border-radius: 4px;
+      transition: border-color .25s, transform .2s, box-shadow .25s;
+      cursor: pointer;
+    }
+    .card:hover { border-color: ${T.accent}; transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,.15); }
+    .card.sel { border-color: ${T.accent}; background: ${dark ? "#1a180f" : "#fdf6e8"}; }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      background: ${T.accent}; color: ${T.accentText};
+      border: none; padding: 14px 36px;
+      font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 12px;
+      letter-spacing: 2px; text-transform: uppercase; cursor: pointer;
+      border-radius: 2px; transition: all .2s; white-space: nowrap;
+    }
+    .btn-primary:hover { filter: brightness(1.12); transform: translateY(-1px); }
+    .btn-primary:disabled { background: ${T.border}; color: ${T.muted}; cursor: not-allowed; transform: none; filter: none; }
+    .btn-ghost {
+      background: transparent; color: ${T.accent};
+      border: 1px solid ${T.accent}; padding: 13px 36px;
+      font-family: 'Outfit', sans-serif; font-weight: 500; font-size: 12px;
+      letter-spacing: 2px; text-transform: uppercase; cursor: pointer;
+      border-radius: 2px; transition: all .2s;
+    }
+    .btn-ghost:hover { background: ${dark ? "rgba(201,169,110,.1)" : "rgba(160,120,64,.08)"}; }
+    .btn-icon {
+      background: ${T.surface}; border: 1px solid ${T.border};
+      color: ${T.text}; width: 40px; height: 40px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all .2s; font-size: 16px;
+    }
+    .btn-icon:hover { border-color: ${T.accent}; color: ${T.accent}; }
+
+    /* ── Input ── */
+    .inp {
+      background: ${T.inputBg}; border: 1px solid ${T.border};
+      color: ${T.text}; padding: 13px 16px; width: 100%; outline: none;
+      font-family: 'Outfit', sans-serif; font-size: 14px; border-radius: 2px;
+      transition: border-color .2s;
+    }
+    .inp:focus { border-color: ${T.accent}; }
+    .inp::placeholder { color: ${T.muted}; }
+    textarea.inp { resize: none; }
+
+    /* ── Time slots ── */
+    .slot {
+      background: ${T.card}; border: 1px solid ${T.border};
+      color: ${T.subtext}; padding: 9px; font-size: 12px;
+      font-family: 'Outfit', sans-serif; letter-spacing: .5px;
+      cursor: pointer; text-align: center; border-radius: 2px; transition: all .2s;
+    }
+    .slot:hover:not(.taken) { border-color: ${T.accent}; color: ${T.text}; }
+    .slot.chosen { background: ${T.accent}; color: ${T.accentText}; border-color: ${T.accent}; font-weight: 600; }
+    .slot.taken { opacity: .28; cursor: not-allowed; text-decoration: line-through; }
+
+    /* ── Calendar ── */
+    .cday {
+      aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+      font-size: 13px; cursor: pointer; border-radius: 50%;
+      transition: all .15s; color: ${T.muted}; font-family: 'Outfit', sans-serif;
+    }
+    .cday:hover:not(.past):not(.emp) { background: ${T.border}; color: ${T.text}; }
+    .cday.chosen { background: ${T.accent} !important; color: ${T.accentText} !important; font-weight: 600; }
+    .cday.past { opacity: .22; cursor: default; }
+    .cday.tod { color: ${T.accent}; font-weight: 600; }
+    .cday.emp { cursor: default; }
+
+    /* ── Modal overlay ── */
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 100;
+      background: ${T.overlay};
+      backdrop-filter: blur(12px);
+      display: flex; align-items: center; justify-content: center;
+      animation: fadeIn .25s ease;
+    }
+    .modal-box {
+      background: ${T.glass};
+      border: 1px solid ${T.border};
+      border-radius: 8px;
+      padding: 48px;
+      width: 420px; max-width: 90vw;
+      box-shadow: ${T.shadow};
+      animation: slideUp .3s ease;
+    }
+
+    /* ── Progress dots ── */
+    .prog { display: flex; align-items: center; justify-content: center; gap: 0; }
+    .pdot { width: 8px; height: 8px; border-radius: 50%; transition: all .3s; }
+    .pline { width: 40px; height: 1px; }
+
+    /* ── Tags ── */
+    .tag {
+      display: inline-block; padding: 3px 12px;
+      font-family: 'Outfit', sans-serif; font-size: 10px;
+      letter-spacing: 1.5px; text-transform: uppercase; border-radius: 2px;
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+    @keyframes slideUp { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:translateY(0) } }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:translateY(0) } }
+    @keyframes spin { to { transform:rotate(360deg) } }
+    @keyframes confettiFall {
+      0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(500px) rotate(720deg); opacity: 0; }
+    }
+    .fade-up { animation: fadeUp .4s ease forwards; }
+    .spinner { width:18px; height:18px; border:2px solid ${T.border}; border-top-color:${T.accent}; border-radius:50%; animation:spin .7s linear infinite; display:inline-block; }
+    .cf { position:absolute; width:6px; height:6px; border-radius:50%; animation:confettiFall 3s ease-in forwards; pointer-events:none; }
+
+    /* ── Nav link ── */
+    .navlink {
+      font-family:'Outfit',sans-serif; font-size:11px; letter-spacing:2px;
+      text-transform:uppercase; cursor:pointer; transition:color .2s;
+      background:none; border:none; color:${T.muted}; padding:4px 0;
+    }
+    .navlink:hover { color:${T.text}; }
+
+    /* ── Toggle switch ── */
+    .toggle { position:relative; width:44px; height:24px; cursor:pointer; }
+    .toggle input { opacity:0; width:0; height:0; }
+    .toggle-track {
+      position:absolute; inset:0; border-radius:12px;
+      background:${dark ? T.accent : T.border}; transition:background .3s;
+    }
+    .toggle-thumb {
+      position:absolute; top:3px; left:3px; width:18px; height:18px;
+      border-radius:50%; background:white;
+      transition:transform .3s; transform:${dark ? "translateX(20px)" : "translateX(0)"};
+    }
+
+    /* ── Admin table ── */
+    .admin-row { border-bottom:1px solid ${T.border}; padding:14px 0; transition:background .15s; }
+    .admin-row:hover { background:${dark ? "rgba(255,255,255,.02)" : "rgba(0,0,0,.02)"}; }
+
+    /* ── Stat card ── */
+    .stat-card {
+      background:${T.card}; border:1px solid ${T.border}; border-radius:4px; padding:24px 28px;
+    }
+
+    /* ── Scrollbar hide ── */
+    .sh::-webkit-scrollbar { display:none; }
+
+    /* ── Divider ── */
+    .divider { border:none; border-top:1px solid ${T.border}; }
+
+    /* ── Section label ── */
+    .section-label {
+      font-family:'Outfit',sans-serif; font-size:10px; letter-spacing:3px;
+      text-transform:uppercase; color:${T.muted};
+    }
+
+    /* ── Avatar ── */
+    .avatar {
+      border-radius:50%; display:flex; align-items:center; justify-content:center;
+      font-family:'Outfit',sans-serif; font-weight:600; letter-spacing:1px;
+      transition:all .25s;
+    }
+  `;
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════════════
+  return (
+    <div style={{ minHeight:"100vh", background:T.bg, color:T.text, transition:"background .4s, color .4s" }}>
+      <style>{css}</style>
+
+      {/* ════════════════ HEADER ════════════════ */}
+      <header style={{
+        position:"sticky", top:0, zIndex:50,
+        background: dark ? "rgba(10,10,10,.92)" : "rgba(250,248,244,.92)",
+        backdropFilter:"blur(20px)",
+        borderBottom:`1px solid ${T.border}`,
+        padding:"0 48px", height:68,
+        display:"flex", alignItems:"center", justifyContent:"space-between",
+        transition:"background .4s",
+      }}>
+        {/* Logo */}
+        <div style={{ display:"flex", alignItems:"baseline", gap:12 }}>
+          <h1 className="serif" style={{ fontSize:26, fontWeight:300, letterSpacing:5, color:T.text }}>LUMIÈRE</h1>
+          <span style={{ fontSize:9, letterSpacing:3, color:T.muted, textTransform:"uppercase" }}>Hair Studio</span>
         </div>
-        <div style={{display:"flex",gap:0,borderBottom:"1px solid #1e1e1e"}}>
-          {[["book","Book"],["admin","Admin"],["setup","⚙ Setup"]].map(([id,label])=>(
-            <button key={id} className={`nt ${activeTab===id?"act2":""}`} onClick={()=>setActiveTab(id)}>{label}</button>
-          ))}
+
+        {/* Nav */}
+        <nav style={{ display:"flex", alignItems:"center", gap:32 }}>
+          <button className="navlink" style={{ color: view==="home" ? T.text : T.muted }} onClick={() => setView("home")}>Home</button>
+          <button className="navlink" style={{ color: view==="book" ? T.text : T.muted }} onClick={() => { setView("book"); resetBook(); }}>Book Now</button>
+          {loggedIn ? (
+            <button className="navlink" style={{ color: view==="admin" ? T.text : T.muted }} onClick={() => setView("admin")}>Admin</button>
+          ) : null}
+        </nav>
+
+        {/* Right actions */}
+        <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+          {/* Settings */}
+          <button className="btn-icon" title="Settings" onClick={() => setShowSettings(true)}>
+            <span style={{ fontSize:15 }}>⚙</span>
+          </button>
+
+          {/* Staff login / avatar */}
+          {loggedIn ? (
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <div className="avatar" style={{ width:34, height:34, background:T.accent, color:T.accentText, fontSize:11 }}>
+                {loggedIn.avatar}
+              </div>
+              <button className="navlink" onClick={doLogout} style={{ color:T.muted, fontSize:10 }}>Sign out</button>
+            </div>
+          ) : (
+            <button
+              className="btn-icon"
+              title="Staff login"
+              onClick={() => setShowLogin(true)}
+              style={{ width:"auto", padding:"0 16px", borderRadius:2, fontSize:11, letterSpacing:1.5, fontFamily:"'Outfit',sans-serif", textTransform:"uppercase" }}>
+              Staff
+            </button>
+          )}
+
+          {/* Book CTA */}
+          <button className="btn-primary" style={{ padding:"10px 24px" }} onClick={() => { setView("book"); resetBook(); }}>
+            Book Now
+          </button>
         </div>
       </header>
 
-      {/* Banners */}
-      {!IS_CONFIGURED && activeTab!=="setup" && (
-        <div className="dbb">
-          <span style={{fontSize:18}}>⚠️</span>
-          <p className="bf" style={{fontSize:12,color:"#c9a96e"}}>
-            <strong>Demo mode</strong> — bookings won't persist between sessions.{" "}
-            <span style={{textDecoration:"underline",cursor:"pointer"}} onClick={()=>setActiveTab("setup")}>Go to Setup</span> to connect your Supabase database.
-          </p>
-        </div>
-      )}
-      {IS_CONFIGURED && dbError && (
-        <div className="dbb" style={{background:"#1a0000",borderColor:"#c0392b44"}}>
-          <span>❌</span>
-          <p className="bf" style={{fontSize:12,color:"#e74c3c"}}>{dbError}</p>
+      {/* ════════════════ SETTINGS MODAL ════════════════ */}
+      {showSettings && (
+        <div className="modal-backdrop" onClick={() => setShowSettings(false)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ width:360 }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:32 }}>
+              <h2 className="serif" style={{ fontSize:28, fontWeight:300 }}>Settings</h2>
+              <button className="btn-icon" onClick={() => setShowSettings(false)} style={{ fontSize:18 }}>×</button>
+            </div>
+
+            {/* Theme toggle */}
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 0", borderTop:`1px solid ${T.border}`, borderBottom:`1px solid ${T.border}` }}>
+              <div>
+                <p style={{ fontSize:14, fontWeight:500, color:T.text }}>Appearance</p>
+                <p style={{ fontSize:12, color:T.muted, marginTop:3 }}>{dark ? "Dark mode active" : "Light mode active"}</p>
+              </div>
+              <label className="toggle" onClick={() => setDark(d => !d)}>
+                <div className="toggle-track">
+                  <div className="toggle-thumb" />
+                </div>
+              </label>
+            </div>
+
+            <div style={{ marginTop:24, padding:"16px 20px", background: dark ? "#111" : "#f5f0e8", borderRadius:4 }}>
+              <p style={{ fontSize:11, color:T.muted, letterSpacing:.5, lineHeight:1.7 }}>
+                {dark ? "🌙 Dark mode — easy on the eyes, perfect for evenings." : "☀️ Light mode — clean and bright for daytime use."}
+              </p>
+            </div>
+
+            <button className="btn-primary" style={{ width:"100%", marginTop:28 }} onClick={() => setShowSettings(false)}>
+              Done
+            </button>
+          </div>
         </div>
       )}
 
-      {/* ── SETUP TAB ── */}
-      {activeTab==="setup" && (
-        <div style={{maxWidth:760,margin:"0 auto",padding:"48px 24px"}} className="fu">
-          <h2 className="af" style={{fontSize:38,fontWeight:300,marginBottom:6}}>Database Setup</h2>
-          <p className="bf" style={{color:"#555",fontSize:13,marginBottom:40}}>Connect Supabase in 4 steps — takes about 5 minutes, completely free</p>
-          {[
-            {n:1,title:"Create a free Supabase project",body:<>Go to <a href="https://supabase.com" target="_blank" rel="noreferrer" style={{color:"#c9a96e"}}>supabase.com</a> → New Project. Give it a name like <em>adeshairworld-booking</em> and set a database password. Wait ~60 seconds for it to provision.</>},
-            {n:2,title:"Create the bookings table",body:<>In your project go to <strong style={{color:"#f0ece4"}}>Database → SQL Editor → New Query</strong>. Paste and run the SQL below:</>,code:SQL_SETUP},
-            {n:3,title:"Get your API credentials",body:<>Go to <strong style={{color:"#f0ece4"}}>Project Settings → API</strong>. Copy your <strong style={{color:"#f0ece4"}}>Project URL</strong> and the <strong style={{color:"#f0ece4"}}>anon public</strong> key.</>},
-            {n:4,title:"Paste credentials into the app",body:<>Open <code style={{color:"#c9a96e",background:"#111",padding:"2px 6px"}}>booking-app.jsx</code> and replace the two constants at the very top of the file:</>,code:`const SUPABASE_URL = "https://xxxxxxxxxxxx.supabase.co";\nconst SUPABASE_ANON_KEY = "eyJhbGci...your-anon-key...";`},
-          ].map(s=>(
-            <div key={s.n} style={{display:"flex",gap:20,marginBottom:36}}>
-              <div style={{paddingTop:2}}><div className="sn">{s.n}</div></div>
-              <div style={{flex:1}}>
-                <h3 className="af" style={{fontSize:22,fontWeight:300,marginBottom:8}}>{s.title}</h3>
-                <p className="bf" style={{fontSize:13,color:"#777",lineHeight:1.7}}>{s.body}</p>
-                {s.code&&(
-                  <div style={{position:"relative",marginTop:14}}>
-                    <div className="cb">{s.code}</div>
-                    <button className="bg bsm" style={{position:"absolute",top:12,right:12,padding:"6px 14px",fontSize:10,letterSpacing:1}}
-                      onClick={()=>{navigator.clipboard.writeText(s.code);setCopied(s.n);setTimeout(()=>setCopied(null),2000)}}>
-                      {copied===s.n?"Copied ✓":"Copy"}
+      {/* ════════════════ STAFF LOGIN MODAL ════════════════ */}
+      {showLogin && (
+        <div className="modal-backdrop" onClick={() => { setShowLogin(false); setLoginForm({ u:"", p:"", err:"" }); }}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            {/* Decorative accent line */}
+            <div style={{ position:"absolute", top:0, left:48, right:48, height:2, background:`linear-gradient(90deg, transparent, ${T.accent}, transparent)`, borderRadius:1 }} />
+
+            <div style={{ textAlign:"center", marginBottom:36 }}>
+              <div className="avatar" style={{ width:56, height:56, background:T.accent, color:T.accentText, fontSize:18, margin:"0 auto 16px" }}>✦</div>
+              <h2 className="serif" style={{ fontSize:32, fontWeight:300, letterSpacing:2 }}>Staff Portal</h2>
+              <p style={{ fontSize:12, color:T.muted, marginTop:6, letterSpacing:.5 }}>Sign in to access appointments & admin</p>
+            </div>
+
+            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              <div>
+                <p className="section-label" style={{ marginBottom:8 }}>Username</p>
+                <input
+                  className="inp"
+                  placeholder="Enter username"
+                  value={loginForm.u}
+                  onChange={e => setLoginForm(f => ({ ...f, u:e.target.value, err:"" }))}
+                  onKeyDown={e => e.key === "Enter" && doLogin()}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <p className="section-label" style={{ marginBottom:8 }}>Password</p>
+                <input
+                  className="inp"
+                  type="password"
+                  placeholder="Enter password"
+                  value={loginForm.p}
+                  onChange={e => setLoginForm(f => ({ ...f, p:e.target.value, err:"" }))}
+                  onKeyDown={e => e.key === "Enter" && doLogin()}
+                />
+              </div>
+              {loginForm.err && (
+                <p style={{ fontSize:12, color:"#e74c3c", textAlign:"center" }}>{loginForm.err}</p>
+              )}
+            </div>
+
+            <button className="btn-primary" style={{ width:"100%", marginTop:28 }} onClick={doLogin}>
+              Sign In
+            </button>
+
+            <p style={{ textAlign:"center", fontSize:11, color:T.muted, marginTop:20 }}>
+              Demo — try <span style={{ color:T.accent }}>admin / lumiere2024</span>
+            </p>
+
+            <button className="navlink" style={{ display:"block", margin:"14px auto 0", color:T.muted }} onClick={() => { setShowLogin(false); setLoginForm({ u:"", p:"", err:"" }); }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════ HOME ════════════════ */}
+      {view === "home" && (
+        <>
+          {/* ── Hero Carousel ── */}
+          <div className="carousel">
+            {SLIDES.map((sl, i) => (
+              <div
+                key={i}
+                className={`carousel-slide ${i === slide ? "active" : ""}`}
+                style={{ background: sl.bg }}
+              >
+                {/* Text */}
+                <div className="carousel-text" style={{ maxWidth:520 }}>
+                  <p style={{ fontSize:10, letterSpacing:4, textTransform:"uppercase", color: sl.accent, marginBottom:16, fontFamily:"'Outfit',sans-serif" }}>
+                    Featured Service
+                  </p>
+                  <h2 className="serif" style={{ fontSize:56, fontWeight:300, color:"#fff", lineHeight:1.1, marginBottom:14 }}>
+                    {sl.title}
+                  </h2>
+                  <p style={{ fontSize:15, color:"rgba(255,255,255,.6)", marginBottom:24, fontFamily:"'Outfit',sans-serif", letterSpacing:.5 }}>
+                    {sl.sub}
+                  </p>
+                  <div style={{ display:"flex", alignItems:"center", gap:20 }}>
+                    <span className="serif" style={{ fontSize:28, color: sl.accent }}>{sl.price}</span>
+                    <button className="btn-primary" style={{ background: sl.accent, color:"#0d0d0d" }}
+                      onClick={() => { setView("book"); resetBook(); }}>
+                      Book Now
                     </button>
                   </div>
-                )}
-              </div>
-            </div>
-          ))}
-          <div className="card noh" style={{padding:24,background:"#0d1a0d",borderColor:"#1e4d1e"}}>
-            <p className="bf" style={{fontSize:12,color:"#4caf50",lineHeight:1.8}}>
-              ✅ <strong>That's it.</strong> After pasting your credentials and redeploying, every booking saves to Supabase in real time. The Admin tab shows live data, booked time slots are automatically blocked on the calendar, and you can delete bookings from the dashboard.
-            </p>
-          </div>
-        </div>
-      )}
+                </div>
 
-      {/* ── ADMIN TAB ── */}
-      {activeTab==="admin" && (
-        <div style={{maxWidth:960,margin:"0 auto",padding:"48px 24px"}} className="fu">
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:32}}>
-            <div>
-              <h2 className="af" style={{fontSize:36,fontWeight:300}}>Appointments</h2>
-              <p className="bf" style={{color:"#555",fontSize:13,marginTop:4}}>{IS_CONFIGURED?"Live from Supabase":"Demo mode — connect DB to persist data"}</p>
-            </div>
-            <div style={{display:"flex",gap:12,alignItems:"center"}}>
-              {loading&&<div className="sp"/>}
-              <button className="bo bsm" onClick={fetchBookings}>↻ Refresh</button>
-            </div>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16,marginBottom:36}}>
-            {[
-              {label:"Total Bookings",value:bookings.length},
-              {label:"Unique Clients",value:new Set(bookings.map(b=>b.email)).size},
-              {label:"Projected Revenue",value:`$${revenue}`},
-            ].map(s=>(
-              <div key={s.label} className="card noh" style={{padding:"20px 24px"}}>
-                <p className="bf" style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#555"}}>{s.label}</p>
-                <p className="af gold" style={{fontSize:40,fontWeight:300,lineHeight:1.1,marginTop:6}}>{s.value}</p>
+                {/* SVG art */}
+                <div className="carousel-art">
+                  <svg width="360" height="360" viewBox="0 0 640 360" fill="none" dangerouslySetInnerHTML={{ __html: sl.shape }} />
+                </div>
               </div>
             ))}
-          </div>
-          <div className="card noh" style={{padding:"0 24px"}}>
-            <div style={{padding:"14px 0",borderBottom:"1px solid #222",display:"grid",gridTemplateColumns:"2fr 1.5fr 1.2fr 1fr 1fr 40px",gap:12}}>
-              {["Client","Service","Stylist","Date","Time",""].map((h,i)=>(
-                <p key={i} className="bf" style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#444"}}>{h}</p>
+
+            {/* Dots */}
+            <div className="carousel-dots">
+              {SLIDES.map((_, i) => (
+                <button key={i} className={`cdot ${i === slide ? "active" : ""}`} onClick={() => setSlide(i)} />
               ))}
             </div>
-            {bookings.length===0&&(
-              <p className="bf" style={{padding:"32px 0",color:"#333",fontSize:13}}>
-                {loading?"Loading...":"No bookings yet — make one to see it appear here instantly."}
-              </p>
-            )}
-            {bookings.map(b=>(
-              <div key={b.id} className="br" style={{display:"grid",gridTemplateColumns:"2fr 1.5fr 1.2fr 1fr 1fr 40px",gap:12,alignItems:"center"}}>
-                <div>
-                  <p className="bf" style={{fontSize:14,color:"#f0ece4"}}>{b.name}</p>
-                  <p className="bf" style={{fontSize:11,color:"#444",marginTop:2}}>{b.email}</p>
-                </div>
-                <span className="tg" style={{background:"#c9a96e18",color:"#c9a96e",border:"1px solid #c9a96e33"}}>{b.service}</span>
-                <p className="bf" style={{fontSize:13,color:"#888"}}>{b.staff}</p>
-                <p className="bf" style={{fontSize:13,color:"#888"}}>{b.date}</p>
-                <p className="bf" style={{fontSize:13,color:"#c9a96e"}}>{b.time}</p>
-                <button className="db" title="Cancel booking" onClick={()=>handleDelete(b.id)} disabled={deleting===b.id}>
-                  {deleting===b.id?<span className="sp" style={{width:14,height:14}}/>:"✕"}
-                </button>
-              </div>
-            ))}
           </div>
-        </div>
+
+          {/* ── Services grid ── */}
+          <section style={{ maxWidth:1100, margin:"0 auto", padding:"80px 40px 40px" }}>
+            <div style={{ textAlign:"center", marginBottom:52 }}>
+              <p className="section-label" style={{ marginBottom:12 }}>What we offer</p>
+              <h2 className="serif" style={{ fontSize:44, fontWeight:300 }}>Our Services</h2>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:20 }}>
+              {SERVICES.map(s => (
+                <div key={s.id} className="card" style={{ padding:"32px 24px", textAlign:"center" }}
+                  onClick={() => { setSelService(s); setView("book"); setBookStep(2); }}>
+                  <div style={{ fontSize:32, marginBottom:16, color:T.accent }}>{s.icon}</div>
+                  <h3 className="serif" style={{ fontSize:22, fontWeight:400, marginBottom:8 }}>{s.name}</h3>
+                  <p style={{ fontSize:12, color:T.muted, marginBottom:20, lineHeight:1.6 }}>{s.tagline}</p>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <span style={{ fontSize:11, color:T.muted }}>{s.duration} min</span>
+                    <span className="serif" style={{ fontSize:22, color:T.accent }}>${s.price}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* ── Team ── */}
+          <section style={{ maxWidth:1100, margin:"0 auto", padding:"40px 40px 80px" }}>
+            <div style={{ textAlign:"center", marginBottom:52 }}>
+              <p className="section-label" style={{ marginBottom:12 }}>The team</p>
+              <h2 className="serif" style={{ fontSize:44, fontWeight:300 }}>Meet Your Stylists</h2>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:20 }}>
+              {STAFF.map(s => (
+                <div key={s.id} className="card" style={{ padding:"36px", textAlign:"center" }}>
+                  <div className="avatar" style={{ width:72, height:72, background:dark?"#2a2a2a":T.border, color:T.accent, fontSize:18, margin:"0 auto 20px" }}>
+                    {s.avatar}
+                  </div>
+                  <h3 className="serif" style={{ fontSize:24, fontWeight:400 }}>{s.name}</h3>
+                  <p style={{ fontSize:11, color:T.muted, marginTop:4, letterSpacing:1, textTransform:"uppercase" }}>{s.role}</p>
+                  <p style={{ fontSize:12, color:T.accent, marginTop:10 }}>{s.specialty}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
       )}
 
-      {/* ── BOOKING FLOW ── */}
-      {activeTab==="book" && !submitted && (
-        <div style={{maxWidth:780,margin:"0 auto",padding:"48px 24px"}}>
-          {/* Step dots */}
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:0,marginBottom:48}}>
-            {[1,2,3,4].map((s,i)=>(
-              <div key={s} style={{display:"flex",alignItems:"center"}}>
-                <div style={{width:8,height:8,borderRadius:"50%",background:step===s?"#c9a96e":step>s?"#6b5a3e":"#2a2a2a",transition:"background .3s"}}/>
-                {i<3&&<div style={{width:40,height:1,background:step>s?"#6b5a3e":"#2a2a2a"}}/>}
+      {/* ════════════════ BOOKING FLOW ════════════════ */}
+      {view === "book" && !submitted && (
+        <div style={{ maxWidth:860, margin:"0 auto", padding:"60px 32px" }}>
+          {/* Progress */}
+          <div className="prog" style={{ marginBottom:52 }}>
+            {[1,2,3,4].map((s,i) => (
+              <div key={s} style={{ display:"flex", alignItems:"center" }}>
+                <div className="pdot" style={{ background: bookStep===s ? T.accent : bookStep>s ? (dark?"#6b5a3e":"#c8a97e") : T.border }} />
+                {i < 3 && <div className="pline" style={{ background: bookStep>s ? (dark?"#6b5a3e":"#c8a97e") : T.border }} />}
               </div>
             ))}
           </div>
 
-          {step===1&&(
-            <div className="fu">
-              <h2 className="af" style={{fontSize:38,fontWeight:300,marginBottom:6}}>Select a Service</h2>
-              <p className="bf" style={{color:"#555",fontSize:13,marginBottom:32}}>Choose what you'd like done today</p>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-                {SERVICES.map(s=>(
-                  <div key={s.id} className={`card ${selectedService?.id===s.id?"sel":""}`} style={{padding:"28px 24px",cursor:"pointer"}} onClick={()=>setSelectedService(s)}>
-                    <div style={{fontSize:28,marginBottom:12}}>{s.icon}</div>
-                    <h3 className="af" style={{fontSize:22,fontWeight:300}}>{s.name}</h3>
-                    <div style={{display:"flex",justifyContent:"space-between",marginTop:16,alignItems:"center"}}>
-                      <p className="bf" style={{fontSize:12,color:"#555"}}>{s.duration} min</p>
-                      <p className="af gold" style={{fontSize:22}}>${s.price}</p>
+          {/* Step 1 */}
+          {bookStep===1 && (
+            <div className="fade-up">
+              <p className="section-label" style={{ marginBottom:10 }}>Step 1 of 4</p>
+              <h2 className="serif" style={{ fontSize:44, fontWeight:300, marginBottom:8 }}>Choose a Service</h2>
+              <p style={{ color:T.muted, fontSize:14, marginBottom:40 }}>Select the treatment you'd like</p>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
+                {SERVICES.map(s => (
+                  <div key={s.id} className={`card ${selService?.id===s.id?"sel":""}`} style={{ padding:"28px 24px" }}
+                    onClick={() => setSelService(s)}>
+                    <div style={{ fontSize:28, color:T.accent, marginBottom:14 }}>{s.icon}</div>
+                    <h3 className="serif" style={{ fontSize:24, fontWeight:400, marginBottom:6 }}>{s.name}</h3>
+                    <p style={{ fontSize:12, color:T.muted, marginBottom:20 }}>{s.tagline}</p>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <span style={{ fontSize:12, color:T.muted }}>{s.duration} min</span>
+                      <span className="serif" style={{ fontSize:24, color:T.accent }}>${s.price}</span>
                     </div>
                   </div>
                 ))}
               </div>
-              <div style={{display:"flex",justifyContent:"flex-end",marginTop:32}}>
-                <button className="bg" disabled={!selectedService} onClick={()=>setStep(2)}>Continue</button>
+              <div style={{ display:"flex", justifyContent:"flex-end", marginTop:36 }}>
+                <button className="btn-primary" disabled={!selService} onClick={() => setBookStep(2)}>Continue</button>
               </div>
             </div>
           )}
 
-          {step===2&&(
-            <div className="fu">
-              <h2 className="af" style={{fontSize:38,fontWeight:300,marginBottom:6}}>Choose Your Stylist</h2>
-              <p className="bf" style={{color:"#555",fontSize:13,marginBottom:32}}>Select who you'd like to work with</p>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16}}>
-                {STAFF.map(s=>(
-                  <div key={s.id} className={`card ${selectedStaff?.id===s.id?"sel":""}`} style={{padding:"32px 24px",cursor:"pointer",textAlign:"center"}} onClick={()=>setSelectedStaff(s)}>
-                    <div style={{width:64,height:64,borderRadius:"50%",background:selectedStaff?.id===s.id?"#c9a96e":"#2a2a2a",color:selectedStaff?.id===s.id?"#0d0d0d":"#888",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",fontFamily:"Jost,sans-serif",fontSize:16,fontWeight:500,transition:"all .2s"}}>{s.avatar}</div>
-                    <h3 className="af" style={{fontSize:20,fontWeight:300}}>{s.name}</h3>
-                    <p className="bf" style={{fontSize:12,color:"#555",marginTop:6}}>{s.role}</p>
+          {/* Step 2 */}
+          {bookStep===2 && (
+            <div className="fade-up">
+              <p className="section-label" style={{ marginBottom:10 }}>Step 2 of 4</p>
+              <h2 className="serif" style={{ fontSize:44, fontWeight:300, marginBottom:8 }}>Choose Your Stylist</h2>
+              <p style={{ color:T.muted, fontSize:14, marginBottom:40 }}>Select who you'd like to work with</p>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:18 }}>
+                {STAFF.map(s => (
+                  <div key={s.id} className={`card ${selStaff?.id===s.id?"sel":""}`} style={{ padding:"36px 24px", textAlign:"center" }}
+                    onClick={() => setSelStaff(s)}>
+                    <div className="avatar" style={{
+                      width:68, height:68,
+                      background: selStaff?.id===s.id ? T.accent : (dark?"#252525":T.border),
+                      color: selStaff?.id===s.id ? T.accentText : T.text,
+                      fontSize:18, margin:"0 auto 18px",
+                    }}>{s.avatar}</div>
+                    <h3 className="serif" style={{ fontSize:22, fontWeight:400 }}>{s.name}</h3>
+                    <p style={{ fontSize:11, color:T.muted, marginTop:5, letterSpacing:1, textTransform:"uppercase" }}>{s.role}</p>
+                    <p style={{ fontSize:12, color:T.accent, marginTop:8 }}>{s.specialty}</p>
                   </div>
                 ))}
               </div>
-              <div style={{display:"flex",justifyContent:"space-between",marginTop:32}}>
-                <button className="bo" onClick={()=>setStep(1)}>Back</button>
-                <button className="bg" disabled={!selectedStaff} onClick={()=>setStep(3)}>Continue</button>
+              <div style={{ display:"flex", justifyContent:"space-between", marginTop:36 }}>
+                <button className="btn-ghost" onClick={() => setBookStep(1)}>Back</button>
+                <button className="btn-primary" disabled={!selStaff} onClick={() => setBookStep(3)}>Continue</button>
               </div>
             </div>
           )}
 
-          {step===3&&(
-            <div className="fu">
-              <h2 className="af" style={{fontSize:38,fontWeight:300,marginBottom:6}}>Pick a Date & Time</h2>
-              <p className="bf" style={{color:"#555",fontSize:13,marginBottom:32}}>
-                {IS_CONFIGURED?"Booked slots load live from the database":"Demo mode — slots not synced to DB"}
-              </p>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:32}}>
-                <div className="card noh" style={{padding:24}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
-                    <button onClick={()=>{if(calMonth===0){setCalMonth(11);setCalYear(y=>y-1)}else setCalMonth(m=>m-1)}} style={{background:"none",border:"none",color:"#aaa",cursor:"pointer",fontSize:18,padding:"4px 8px"}}>‹</button>
-                    <p className="af" style={{fontSize:18,fontWeight:300}}>{MONTHS[calMonth]} {calYear}</p>
-                    <button onClick={()=>{if(calMonth===11){setCalMonth(0);setCalYear(y=>y+1)}else setCalMonth(m=>m+1)}} style={{background:"none",border:"none",color:"#aaa",cursor:"pointer",fontSize:18,padding:"4px 8px"}}>›</button>
+          {/* Step 3 */}
+          {bookStep===3 && (
+            <div className="fade-up">
+              <p className="section-label" style={{ marginBottom:10 }}>Step 3 of 4</p>
+              <h2 className="serif" style={{ fontSize:44, fontWeight:300, marginBottom:8 }}>Pick a Date & Time</h2>
+              <p style={{ color:T.muted, fontSize:14, marginBottom:40 }}>Real-time availability for {selStaff?.name}</p>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:28 }}>
+                {/* Calendar */}
+                <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:4, padding:24 }}>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+                    <button className="btn-icon" style={{ width:32, height:32, fontSize:16 }} onClick={() => { if(calMonth===0){setCalMonth(11);setCalYear(y=>y-1)}else setCalMonth(m=>m-1) }}>‹</button>
+                    <p className="serif" style={{ fontSize:18, fontWeight:300 }}>{MONTHS[calMonth]} {calYear}</p>
+                    <button className="btn-icon" style={{ width:32, height:32, fontSize:16 }} onClick={() => { if(calMonth===11){setCalMonth(0);setCalYear(y=>y+1)}else setCalMonth(m=>m+1) }}>›</button>
                   </div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:8}}>
-                    {DAYS.map(d=><p key={d} className="bf" style={{textAlign:"center",fontSize:10,color:"#444",letterSpacing:1,padding:"4px 0"}}>{d}</p>)}
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:2, marginBottom:8 }}>
+                    {DAYS.map(d=><p key={d} className="section-label" style={{ textAlign:"center", padding:"4px 0", fontSize:9 }}>{d}</p>)}
                   </div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
-                    {days.map((day,i)=>{
-                      const isPast=day&&new Date(calYear,calMonth,day)<new Date(today.getFullYear(),today.getMonth(),today.getDate());
-                      const isToday=day===today.getDate()&&calMonth===today.getMonth()&&calYear===today.getFullYear();
-                      return(
-                        <div key={i} className={`cd ${!day?"emp":""} ${isPast?"past":""} ${isToday?"tod":""} ${selectedDate===day?"sel2":""}`}
-                          onClick={()=>{if(!isPast&&day){setSelectedDate(day);setSelectedTime(null)}}}>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:2 }}>
+                    {days.map((day,i) => {
+                      const isPast = day && new Date(calYear,calMonth,day) < new Date(today.getFullYear(),today.getMonth(),today.getDate());
+                      const isToday = day===today.getDate() && calMonth===today.getMonth() && calYear===today.getFullYear();
+                      return (
+                        <div key={i} className={`cday ${!day?"emp":""} ${isPast?"past":""} ${isToday?"tod":""} ${selDate===day?"chosen":""}`}
+                          onClick={() => { if(!isPast&&day){ setSelDate(day); setSelTime(null); } }}>
                           {day}
                         </div>
                       );
                     })}
                   </div>
                 </div>
+
+                {/* Time slots */}
                 <div>
-                  <p className="bf" style={{fontSize:11,letterSpacing:2,textTransform:"uppercase",color:"#555",marginBottom:16}}>
-                    {selectedDate?`${MONTHS[calMonth].slice(0,3)} ${selectedDate} — Available Times`:"Select a date first"}
+                  <p className="section-label" style={{ marginBottom:14 }}>
+                    {selDate ? `Available — ${MONTHS[calMonth].slice(0,3)} ${selDate}` : "Select a date first"}
                   </p>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,maxHeight:320,overflowY:"auto"}} className="sh">
-                    {selectedDate?TIME_SLOTS.map(t=>(
-                      <div key={t} className={`ts ${takenSlots.includes(t)?"bk":""} ${selectedTime===t?"act":""}`}
-                        onClick={()=>!takenSlots.includes(t)&&setSelectedTime(t)}>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, maxHeight:320, overflowY:"auto" }} className="sh">
+                    {selDate ? TIME_SLOTS.map(t => (
+                      <div key={t} className={`slot ${takenSlots.includes(t)?"taken":""} ${selTime===t?"chosen":""}`}
+                        onClick={() => !takenSlots.includes(t) && setSelTime(t)}>
                         {t}
                       </div>
-                    )):(
-                      <p className="bf" style={{fontSize:13,color:"#333",gridColumn:"span 2"}}>← Pick a date on the calendar</p>
+                    )) : (
+                      <p style={{ fontSize:13, color:T.muted, gridColumn:"span 2", paddingTop:12 }}>← Pick a date to see times</p>
                     )}
                   </div>
                 </div>
               </div>
-              <div style={{display:"flex",justifyContent:"space-between",marginTop:32}}>
-                <button className="bo" onClick={()=>setStep(2)}>Back</button>
-                <button className="bg" disabled={!selectedDate||!selectedTime} onClick={()=>setStep(4)}>Continue</button>
+              <div style={{ display:"flex", justifyContent:"space-between", marginTop:36 }}>
+                <button className="btn-ghost" onClick={() => setBookStep(2)}>Back</button>
+                <button className="btn-primary" disabled={!selDate||!selTime} onClick={() => setBookStep(4)}>Continue</button>
               </div>
             </div>
           )}
 
-          {step===4&&(
-            <div className="fu">
-              <h2 className="af" style={{fontSize:38,fontWeight:300,marginBottom:6}}>Your Details</h2>
-              <p className="bf" style={{color:"#555",fontSize:13,marginBottom:32}}>Almost done — just a few things</p>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40}}>
-                <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          {/* Step 4 */}
+          {bookStep===4 && (
+            <div className="fade-up">
+              <p className="section-label" style={{ marginBottom:10 }}>Step 4 of 4</p>
+              <h2 className="serif" style={{ fontSize:44, fontWeight:300, marginBottom:8 }}>Your Details</h2>
+              <p style={{ color:T.muted, fontSize:14, marginBottom:40 }}>Almost done — just a few things</p>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:40 }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
                   {[
-                    {key:"name",label:"Full Name",placeholder:"Your full name",type:"text"},
-                    {key:"email",label:"Email Address",placeholder:"you@example.com",type:"email"},
-                    {key:"phone",label:"Phone Number",placeholder:"(555) 000-0000",type:"tel"},
-                  ].map(f=>(
-                    <div key={f.key}>
-                      <label className="bf" style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#555",display:"block",marginBottom:8}}>{f.label}</label>
-                      <input className="inp" type={f.type} placeholder={f.placeholder} value={form[f.key]} onChange={e=>setForm(p=>({...p,[f.key]:e.target.value}))}/>
+                    { k:"name",  label:"Full Name",     ph:"Your full name",    type:"text" },
+                    { k:"email", label:"Email Address",  ph:"you@example.com",   type:"email" },
+                    { k:"phone", label:"Phone Number",   ph:"(555) 000-0000",    type:"tel" },
+                  ].map(f => (
+                    <div key={f.k}>
+                      <p className="section-label" style={{ marginBottom:8 }}>{f.label}</p>
+                      <input className="inp" type={f.type} placeholder={f.ph}
+                        value={clientForm[f.k]} onChange={e => setClientForm(p=>({...p,[f.k]:e.target.value}))} />
                     </div>
                   ))}
                   <div>
-                    <label className="bf" style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#555",display:"block",marginBottom:8}}>Notes (optional)</label>
-                    <textarea className="inp" placeholder="Any special requests..." rows={3} style={{resize:"none"}} value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))}/>
+                    <p className="section-label" style={{ marginBottom:8 }}>Notes (optional)</p>
+                    <textarea className="inp" rows={3} placeholder="Any special requests..."
+                      value={clientForm.notes} onChange={e => setClientForm(p=>({...p,notes:e.target.value}))} />
                   </div>
-                  {dbError&&<p className="bf" style={{fontSize:12,color:"#e74c3c"}}>{dbError}</p>}
+                  {bookErr && <p style={{ fontSize:12, color:"#e74c3c" }}>{bookErr}</p>}
                 </div>
-                <div className="card noh" style={{padding:28,height:"fit-content"}}>
-                  <p className="bf" style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#555",marginBottom:20}}>Booking Summary</p>
+
+                {/* Summary */}
+                <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:4, padding:28, height:"fit-content" }}>
+                  <p className="section-label" style={{ marginBottom:20 }}>Booking Summary</p>
                   {[
-                    {label:"Service",value:selectedService?.name},
-                    {label:"Duration",value:`${selectedService?.duration} min`},
-                    {label:"Stylist",value:selectedStaff?.name},
-                    {label:"Date",value:dateStr},
-                    {label:"Time",value:selectedTime},
-                  ].map(item=>(
-                    <div key={item.label} style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
-                      <p className="bf" style={{fontSize:12,color:"#555"}}>{item.label}</p>
-                      <p className="bf" style={{fontSize:13,color:"#f0ece4"}}>{item.value}</p>
+                    { label:"Service",  value:selService?.name },
+                    { label:"Duration", value:`${selService?.duration} min` },
+                    { label:"Stylist",  value:selStaff?.name },
+                    { label:"Date",     value:dateStr },
+                    { label:"Time",     value:selTime },
+                  ].map(row => (
+                    <div key={row.label} style={{ display:"flex", justifyContent:"space-between", marginBottom:14 }}>
+                      <span style={{ fontSize:12, color:T.muted }}>{row.label}</span>
+                      <span style={{ fontSize:13, color:T.text }}>{row.value}</span>
                     </div>
                   ))}
-                  <hr className="dv" style={{margin:"16px 0"}}/>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                    <p className="bf" style={{fontSize:11,color:"#555",letterSpacing:1}}>TOTAL DUE</p>
-                    <p className="af gold" style={{fontSize:28}}>${selectedService?.price}</p>
+                  <hr className="divider" style={{ margin:"16px 0" }} />
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <span className="section-label">Total Due</span>
+                    <span className="serif" style={{ fontSize:32, color:T.accent }}>${selService?.price}</span>
                   </div>
-                  <div style={{marginTop:16,padding:"10px 14px",background:IS_CONFIGURED?"#0d1a0d":"#1a1000",borderRadius:1}}>
-                    <p className="bf" style={{fontSize:11,color:IS_CONFIGURED?"#4caf50":"#c9a96e"}}>
-                      {IS_CONFIGURED?"✅ Will save to Supabase database":"⚠️ Demo mode — won't persist"}
+                  <div style={{ marginTop:16, padding:"10px 14px", background:dark?"#0d1a0d":"#edfaf3", borderRadius:2 }}>
+                    <p style={{ fontSize:11, color:IS_CONFIGURED?"#4caf50":T.muted }}>
+                      {IS_CONFIGURED ? "✓ Saves to database in real time" : "Demo mode — booking stored in session only"}
                     </p>
                   </div>
                 </div>
               </div>
-              <div style={{display:"flex",justifyContent:"space-between",marginTop:32}}>
-                <button className="bo" onClick={()=>setStep(3)}>Back</button>
-                <button className="bg" disabled={!form.name||!form.email||!form.phone||saving} onClick={handleBook}>
-                  {saving?<span style={{display:"flex",alignItems:"center",gap:10}}><span className="sp"/>Saving...</span>:"Confirm Booking"}
+              <div style={{ display:"flex", justifyContent:"space-between", marginTop:36 }}>
+                <button className="btn-ghost" onClick={() => setBookStep(3)}>Back</button>
+                <button className="btn-primary"
+                  disabled={!clientForm.name||!clientForm.email||!clientForm.phone||saving}
+                  onClick={confirmBooking}>
+                  {saving ? <span style={{ display:"flex", alignItems:"center", gap:10 }}><span className="spinner"/>Saving…</span> : "Confirm Booking"}
                 </button>
               </div>
             </div>
@@ -529,44 +910,147 @@ export default function BookingApp() {
         </div>
       )}
 
-      {/* ── CONFIRMATION ── */}
-      {activeTab==="book"&&submitted&&(
-        <div style={{maxWidth:560,margin:"0 auto",padding:"80px 24px",textAlign:"center",position:"relative"}} className="fu">
-          {[...Array(12)].map((_,i)=>(
-            <div key={i} className="cf" style={{left:`${10+Math.random()*80}%`,top:`${Math.random()*20}%`,background:["#c9a96e","#f0ece4","#6b5a3e"][i%3],animationDelay:`${Math.random()*.5}s`,animationDuration:`${2+Math.random()*2}s`}}/>
+      {/* ════════════════ CONFIRMATION ════════════════ */}
+      {view === "book" && submitted && (
+        <div style={{ maxWidth:580, margin:"0 auto", padding:"80px 32px", textAlign:"center", position:"relative" }} className="fade-up">
+          {[...Array(16)].map((_,i) => (
+            <div key={i} className="cf" style={{
+              left:`${8+Math.random()*84}%`, top:`${Math.random()*15}%`,
+              background:[T.accent,"#f0ece4","#6b5a3e","#fff"][i%4],
+              animationDelay:`${Math.random()*.6}s`, animationDuration:`${2+Math.random()*2}s`,
+            }} />
           ))}
-          <div style={{fontSize:52,marginBottom:20}}>✦</div>
-          <h2 className="af gold" style={{fontSize:42,fontWeight:300,letterSpacing:2}}>You're Booked</h2>
-          <p className="bf" style={{color:"#555",fontSize:13,marginTop:8}}>
-            Confirmation for {form.email}
-            {IS_CONFIGURED&&<span style={{color:"#4caf50"}}> · Saved to database ✓</span>}
-          </p>
-          <div className="card noh" style={{padding:32,marginTop:36,textAlign:"left"}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:24}}>
+          <div className="serif" style={{ fontSize:64, color:T.accent, marginBottom:16 }}>✦</div>
+          <h2 className="serif" style={{ fontSize:48, fontWeight:300, color:T.text, marginBottom:8 }}>You're Booked</h2>
+          <p style={{ fontSize:13, color:T.muted, marginBottom:40 }}>A confirmation will be sent to {clientForm.email}</p>
+
+          <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:4, padding:32, textAlign:"left" }}>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:24, marginBottom:24 }}>
               {[
-                {label:"Service",value:selectedService?.name},
-                {label:"Stylist",value:selectedStaff?.name},
-                {label:"Date",value:dateStr},
-                {label:"Time",value:selectedTime},
-              ].map(item=>(
-                <div key={item.label}>
-                  <p className="bf" style={{fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#555"}}>{item.label}</p>
-                  <p className="af" style={{fontSize:20,marginTop:4,fontWeight:300}}>{item.value}</p>
+                { label:"Service", value:selService?.name },
+                { label:"Stylist", value:selStaff?.name },
+                { label:"Date",    value:dateStr },
+                { label:"Time",    value:selTime },
+              ].map(row => (
+                <div key={row.label}>
+                  <p className="section-label" style={{ marginBottom:5 }}>{row.label}</p>
+                  <p className="serif" style={{ fontSize:20, fontWeight:300 }}>{row.value}</p>
                 </div>
               ))}
             </div>
-            <hr className="dv" style={{margin:"20px 0"}}/>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <p className="bf" style={{fontSize:11,letterSpacing:1,color:"#555"}}>TOTAL DUE AT APPOINTMENT</p>
-              <p className="af gold" style={{fontSize:28}}>${selectedService?.price}</p>
+            <hr className="divider" style={{ marginBottom:20 }} />
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <p className="section-label">Total at appointment</p>
+              <span className="serif" style={{ fontSize:32, color:T.accent }}>${selService?.price}</span>
             </div>
           </div>
-          <div style={{display:"flex",gap:16,justifyContent:"center",marginTop:28}}>
-            <button className="bg" onClick={reset}>Book Again</button>
-            <button className="bo" onClick={()=>{reset();setActiveTab("admin");fetchBookings();}}>View Admin</button>
+
+          <div style={{ display:"flex", gap:14, justifyContent:"center", marginTop:32 }}>
+            <button className="btn-primary" onClick={resetBook}>Book Again</button>
+            <button className="btn-ghost" onClick={() => setView("home")}>Back to Home</button>
           </div>
         </div>
       )}
+
+      {/* ════════════════ ADMIN ════════════════ */}
+      {view === "admin" && loggedIn && (
+        <div style={{ maxWidth:1060, margin:"0 auto", padding:"56px 40px" }} className="fade-up">
+          {/* Admin header */}
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:36 }}>
+            <div>
+              <p className="section-label" style={{ marginBottom:8 }}>Staff Portal</p>
+              <h2 className="serif" style={{ fontSize:40, fontWeight:300 }}>Appointments</h2>
+              <p style={{ fontSize:13, color:T.muted, marginTop:4 }}>
+                Signed in as <span style={{ color:T.accent }}>{loggedIn.name}</span> · {loggedIn.role}
+              </p>
+            </div>
+            <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+              {dbLoading && <span className="spinner" />}
+              <button className="btn-ghost" style={{ padding:"10px 20px" }} onClick={fetchBookings}>↻ Refresh</button>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16, marginBottom:40 }}>
+            {[
+              { label:"Total Bookings",   value: bookings.length },
+              { label:"Unique Clients",   value: new Set(bookings.map(b=>b.email)).size },
+              { label:"Projected Revenue",value: `$${revenue}` },
+            ].map(s => (
+              <div key={s.label} className="stat-card">
+                <p className="section-label" style={{ marginBottom:8 }}>{s.label}</p>
+                <p className="serif" style={{ fontSize:44, fontWeight:300, color:T.accent, lineHeight:1.1 }}>{s.value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Table */}
+          <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:4, padding:"0 28px" }}>
+            <div style={{
+              display:"grid", gridTemplateColumns:"2fr 1.5fr 1.2fr 1fr 1fr 44px",
+              gap:12, padding:"14px 0", borderBottom:`1px solid ${T.border}`,
+            }}>
+              {["Client","Service","Stylist","Date","Time",""].map((h,i) => (
+                <p key={i} className="section-label">{h}</p>
+              ))}
+            </div>
+
+            {bookings.length === 0 && (
+              <p style={{ padding:"36px 0", color:T.muted, fontSize:13 }}>
+                {dbLoading ? "Loading…" : "No bookings yet. Make a booking to see it appear here."}
+              </p>
+            )}
+
+            {bookings.map(b => (
+              <div key={b.id} className="admin-row" style={{
+                display:"grid", gridTemplateColumns:"2fr 1.5fr 1.2fr 1fr 1fr 44px",
+                gap:12, alignItems:"center",
+              }}>
+                <div>
+                  <p style={{ fontSize:14, color:T.text }}>{b.name}</p>
+                  <p style={{ fontSize:11, color:T.muted, marginTop:2 }}>{b.email}</p>
+                </div>
+                <span className="tag" style={{ background:dark?"rgba(201,169,110,.12)":"rgba(160,120,64,.1)", color:T.accent, border:`1px solid ${dark?"rgba(201,169,110,.2)":"rgba(160,120,64,.2)"}` }}>
+                  {b.service}
+                </span>
+                <p style={{ fontSize:13, color:T.subtext }}>{b.staff}</p>
+                <p style={{ fontSize:13, color:T.subtext }}>{b.date}</p>
+                <p style={{ fontSize:13, color:T.accent, fontFamily:"'Outfit',sans-serif" }}>{b.time}</p>
+                <button
+                  style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", fontSize:16, padding:"4px 8px", transition:"color .2s", borderRadius:2 }}
+                  onMouseEnter={e => e.target.style.color="#e74c3c"}
+                  onMouseLeave={e => e.target.style.color=T.muted}
+                  onClick={() => deleteBooking(b.id)}
+                  disabled={deleting===b.id}
+                  title="Cancel booking">
+                  {deleting===b.id ? <span className="spinner" style={{ width:14,height:14 }}/> : "✕"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Guard: redirect if admin accessed without login */}
+      {view === "admin" && !loggedIn && (
+        <div style={{ maxWidth:500, margin:"0 auto", padding:"120px 32px", textAlign:"center" }} className="fade-up">
+          <div className="serif" style={{ fontSize:52, color:T.accent, marginBottom:20 }}>✦</div>
+          <h2 className="serif" style={{ fontSize:36, fontWeight:300, marginBottom:12 }}>Staff Access Only</h2>
+          <p style={{ fontSize:14, color:T.muted, marginBottom:32 }}>Please sign in with your staff credentials to view appointments.</p>
+          <button className="btn-primary" onClick={() => setShowLogin(true)}>Sign In</button>
+        </div>
+      )}
+
+      {/* ════════════════ FOOTER ════════════════ */}
+      <footer style={{ borderTop:`1px solid ${T.border}`, padding:"28px 48px", display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:40 }}>
+        <p className="serif" style={{ fontSize:18, fontWeight:300, letterSpacing:3, color:T.muted }}>LUMIÈRE</p>
+        <p style={{ fontSize:11, color:T.muted, letterSpacing:.5 }}>© 2026 Lumière Hair Studio · All rights reserved</p>
+        <div style={{ display:"flex", gap:24 }}>
+          <button className="navlink" onClick={() => setView("home")}>Home</button>
+          <button className="navlink" onClick={() => { setView("book"); resetBook(); }}>Book</button>
+          <button className="navlink" onClick={() => setShowLogin(true)}>Staff</button>
+        </div>
+      </footer>
     </div>
   );
 }
