@@ -39,7 +39,7 @@ const supabase = {
   },
 };
 
-const IS_CONFIGURED = SUPABASE_URL !== "YOUR_SUPABASE_URL";
+const IS_CONFIGURED = SUPABASE_URL !== "https://tftewlamxkzzajbulsvd.supabase.co";
 
 // ============================================================
 const SERVICES = [
@@ -245,7 +245,7 @@ export default function BookingApp() {
       {/* Header */}
       <header style={{borderBottom:"1px solid #1e1e1e",padding:"20px 40px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div>
-          <h1 className="af" style={{fontSize:28,fontWeight:300,letterSpacing:4}}>LUMIÈRE</h1>
+          <h1 className="af" style={{fontSize:28,fontWeight:300,letterSpacing:4}}>Ades Hair World</h1>
           <p className="bf" style={{fontSize:10,letterSpacing:3,color:"#6b6b6b",textTransform:"uppercase",marginTop:2}}>Hair & Beauty Studio</p>
         </div>
         <div style={{display:"flex",gap:0,borderBottom:"1px solid #1e1e1e"}}>
