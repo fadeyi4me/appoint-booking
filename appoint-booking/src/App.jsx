@@ -43,16 +43,16 @@ const IS_CONFIGURED = SUPABASE_URL !== "YOUR_SUPABASE_URL";
 
 // ============================================================
 const SERVICES = [
-  { id: 1, name: "Haircut & Style", duration: 60, price: 65, icon: "✂️" },
-  { id: 2, name: "Color Treatment", duration: 120, price: 120, icon: "🎨" },
-  { id: 3, name: "Deep Conditioning", duration: 45, price: 45, icon: "💧" },
-  { id: 4, name: "Blowout", duration: 30, price: 35, icon: "💨" },
+  { id: 1, name: "Haircut & Style", duration: 60, price: 150, icon: "✂️" },
+  { id: 2, name: "Color Treatment", duration: 120, price: 220, icon: "🎨" },
+  { id: 3, name: "Deep Conditioning", duration: 45, price: 300, icon: "💧" },
+  { id: 4, name: "Blowout", duration: 30, price: 50, icon: "💨" },
 ];
 
 const STAFF = [
-  { id: 1, name: "Jordan Lee", role: "Senior Stylist", avatar: "JL" },
-  { id: 2, name: "Maya Chen", role: "Color Specialist", avatar: "MC" },
-  { id: 3, name: "Alex Rivera", role: "Style Director", avatar: "AR" },
+  { id: 1, name: "Adesola Fadeyi", role: "Senior Stylist", avatar: "AF" },
+  { id: 2, name: "Gift Michael", role: "Color Specialist", avatar: "GM" },
+  { id: 3, name: "Busola Oguntade", role: "Style Director", avatar: "BO" },
 ];
 
 const TIME_SLOTS = [
@@ -278,7 +278,7 @@ export default function BookingApp() {
           <h2 className="af" style={{fontSize:38,fontWeight:300,marginBottom:6}}>Database Setup</h2>
           <p className="bf" style={{color:"#555",fontSize:13,marginBottom:40}}>Connect Supabase in 4 steps — takes about 5 minutes, completely free</p>
           {[
-            {n:1,title:"Create a free Supabase project",body:<>Go to <a href="https://supabase.com" target="_blank" rel="noreferrer" style={{color:"#c9a96e"}}>supabase.com</a> → New Project. Give it a name like <em>lumiere-booking</em> and set a database password. Wait ~60 seconds for it to provision.</>},
+            {n:1,title:"Create a free Supabase project",body:<>Go to <a href="https://supabase.com" target="_blank" rel="noreferrer" style={{color:"#c9a96e"}}>supabase.com</a> → New Project. Give it a name like <em>adeshairworld-booking</em> and set a database password. Wait ~60 seconds for it to provision.</>},
             {n:2,title:"Create the bookings table",body:<>In your project go to <strong style={{color:"#f0ece4"}}>Database → SQL Editor → New Query</strong>. Paste and run the SQL below:</>,code:SQL_SETUP},
             {n:3,title:"Get your API credentials",body:<>Go to <strong style={{color:"#f0ece4"}}>Project Settings → API</strong>. Copy your <strong style={{color:"#f0ece4"}}>Project URL</strong> and the <strong style={{color:"#f0ece4"}}>anon public</strong> key.</>},
             {n:4,title:"Paste credentials into the app",body:<>Open <code style={{color:"#c9a96e",background:"#111",padding:"2px 6px"}}>booking-app.jsx</code> and replace the two constants at the very top of the file:</>,code:`const SUPABASE_URL = "https://xxxxxxxxxxxx.supabase.co";\nconst SUPABASE_ANON_KEY = "eyJhbGci...your-anon-key...";`},
